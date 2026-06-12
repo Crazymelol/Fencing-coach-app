@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#10141f">
+<title>Fencing Coach — Touch Recorder</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ============ SETUP SCREEN ============ -->
+<section id="screen-setup" class="screen active">
+  <header class="topbar">
+    <h1>🤺 Fencing Coach</h1>
+    <button class="btn ghost" data-nav="stats">📊 Statistics</button>
+  </header>
+
+  <div class="card">
+    <h2>New Bout</h2>
+    <div class="setup-grid">
+      <div class="fencer-input left">
+        <label for="name-left">Fencer — Left side</label>
+        <input id="name-left" type="text" list="athlete-list" placeholder="e.g. Ioannis" autocomplete="off">
+      </div>
+      <div class="vs">VS</div>
+      <div class="fencer-input right">
+        <label for="name-right">Fencer — Right side</label>
+        <input id="name-right" type="text" list="athlete-list" placeholder="e.g. Maria" autocomplete="off">
+      </div>
+    </div>
+    <datalist id="athlete-list"></datalist>
+
+    <div class="target-row">
+      <span>Bout to:</span>
+      <div class="seg" id="target-seg">
+        <button class="seg-btn active" data-target="5">5 touches</button>
+        <button class="seg-btn" data-target="15">15 touches</button>
+      </div>
+    </div>
+
+    <button id="btn-start" class="btn primary big">Start Bout ▶</button>
+    <p id="setup-error" class="error hidden">Please enter two different fencer names.</p>
+  </div>
+
+  <div class="card" id="recent-card">
+    <h2>Recent Bouts</h2>
+    <div id="recent-bouts" class="bout-list"></div>
+  </div>
+</section>
+
+<!-- ============ BOUT SCREEN ============ -->
+<section id="screen-bout" class="screen">
+  <header class="scoreboard">
+    <div class="side left">
+      <span class="sb-name" id="sb-name-left">Left</span>
+      <span class="sb-score" id="sb-score-left">0</span>
+    </div>
+    <div class="sb-center">
+      <span id="sb-target">to 5</span>
+      <span id="sb-touchcount">touch 1</span>
+    </div>
+    <div class="side right">
+      <span class="sb-score" id="sb-score-right">0</span>
+      <span class="sb-name" id="sb-name-right">Right</span>
+    </div>
+  </header>
+
+  <p class="hint">👆 Tap the piste where the touch happened</p>
+
+  <div class="piste-wrap">
+    <div id="piste" class="piste">
+      <!-- zone markings drawn in CSS / JS -->
+      <div class="zone warn left"></div>
+      <div class="zone warn right"></div>
+      <div class="line center"></div>
+      <div class="line onguard left"></div>
+      <div class="line onguard right"></div>
+      <div class="piste-label left-label" id="piste-label-left">LEFT</div>
+      <div class="piste-label right-label" id="piste-label-right">RIGHT</div>
+      <div id="touch-markers"></div>
+    </div>
+    <div class="piste-scale">
+      <span>0m</span><span>2m</span><span>5m</span><span>7m</span><span>9m</span><span>12m</span><span>14m</span>
+    </div>
+  </div>
+
+  <div class="bout-actions">
+    <button id="btn-undo" class="btn ghost">↩ Undo last touch</button>
+    <button id="btn-end-bout" class="btn danger ghost">⏹ End bout early</button>
+  </div>
+</section>
+
+<!-- ============ TOUCH DIALOG (who scored) ============ -->
+<div id="dlg-scorer" class="overlay hidden">
+  <div class="dialog">
+    <h3>Who scored the touch?</h3>
+    <div class="big-choice">
+      <button id="choice-left" class="btn choice red"></button>
+      <button id="choice-right" class="btn choice green"></button>
+    </div>
+    <button id="cancel-touch" class="btn ghost">✕ Cancel touch</button>
+  </div>
+</div>
+
+<!-- ============ ACTION DIALOG (attack / defence) ============ -->
+<div id="dlg-action" class="overlay hidden">
+  <div class="dialog">
+    <h3 id="action-title">Attack or Defence?</h3>
+    <div class="big-choice">
+      <button id="choice-attack" class="btn choice attack">⚔️<br>Attack</button>
+      <button id="choice-defence" class="btn choice defence">🛡️<br>Defence</button>
+    </div>
+    <button id="back-scorer" class="btn ghost">← Back</button>
+  </div>
+</div>
+
+<!-- ============ BOUT END DIALOG ============ -->
+<div id="dlg-boutend" class="overlay hidden">
+  <div class="dialog">
+    <h3>🏆 Bout finished</h3>
+    <p id="boutend-summary" class="summary"></p>
+    <button id="btn-next-bout" class="btn primary big">Next bout ▶</button>
+    <button id="btn-rematch" class="btn">🔁 Rematch (same fencers, swap sides)</button>
+    <button id="btn-view-stats" class="btn ghost">📊 View statistics</button>
+  </div>
+</div>
+
+<!-- ============ STATS SCREEN ============ -->
+<section id="screen-stats" class="screen">
+  <header class="topbar">
+    <h1>📊 Statistics</h1>
+    <button class="btn ghost" data-nav="setup">← Back</button>
+  </header>
+
+  <div class="card">
+    <label for="stats-athlete">Athlete</label>
+    <select id="stats-athlete"></select>
+  </div>
+
+  <div class="card" id="stats-summary-card">
+    <h2 id="stats-name"></h2>
+    <div class="stat-grid" id="stat-grid"></div>
+  </div>
+
+  <div class="card">
+    <h2>Touch map <small>(normalised: athlete attacks left → right)</small></h2>
+    <div class="legend">
+      <span><i class="dot attack"></i> Attack</span>
+      <span><i class="dot defence"></i> Defence</span>
+      <span><i class="dot received"></i> Received</span>
+    </div>
+    <div class="piste-wrap small">
+      <div id="stats-piste" class="piste mini">
+        <div class="zone warn left"></div>
+        <div class="zone warn right"></div>
+        <div class="line center"></div>
+        <div class="line onguard left"></div>
+        <div class="line onguard right"></div>
+        <div class="piste-label left-label">OWN END</div>
+        <div class="piste-label right-label">OPPONENT</div>
+        <div id="stats-markers"></div>
+      </div>
+    </div>
+    <h2>Touches by piste zone</h2>
+    <div id="zone-chart" class="zone-chart"></div>
+  </div>
+
+  <div class="card">
+    <h2>Bout history</h2>
+    <div id="stats-bouts" class="bout-list"></div>
+  </div>
+
+  <div class="card">
+    <h2>Data</h2>
+    <div class="row">
+      <button id="btn-export" class="btn">⬇ Export JSON</button>
+      <button id="btn-export-csv" class="btn">⬇ Export CSV</button>
+      <button id="btn-clear" class="btn danger ghost">🗑 Clear all data</button>
+    </div>
+  </div>
+</section>
+
+<script src="app.js"></script>
+</body>
+</html>
