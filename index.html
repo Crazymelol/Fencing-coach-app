@@ -40,6 +40,14 @@
       </div>
     </div>
 
+    <div class="target-row">
+      <span>Type:</span>
+      <div class="seg" id="context-seg">
+        <button class="seg-btn active" data-context="training">🏋 Training</button>
+        <button class="seg-btn" data-context="competition">🏆 Competition</button>
+      </div>
+    </div>
+
     <button id="btn-start" class="btn primary big">Start Bout ▶</button>
     <p id="setup-error" class="error hidden">Please enter two different fencer names.</p>
   </div>
@@ -127,6 +135,29 @@
   </div>
 </div>
 
+<!-- ============ BOUT DETAIL DIALOG ============ -->
+<div id="dlg-boutdetail" class="overlay hidden">
+  <div class="dialog detail">
+    <h3 id="bd-title"></h3>
+    <p id="bd-meta" class="summary"></p>
+    <div class="piste-wrap small">
+      <div class="piste mini">
+        <div class="zone warn left"></div>
+        <div class="zone warn right"></div>
+        <div class="line center"></div>
+        <div class="line onguard left"></div>
+        <div class="line onguard right"></div>
+        <div class="piste-label left-label" id="bd-label-left"></div>
+        <div class="piste-label right-label" id="bd-label-right"></div>
+        <div id="bd-markers"></div>
+      </div>
+    </div>
+    <div id="bd-stats" class="stat-grid"></div>
+    <div id="bd-touches" class="touch-list"></div>
+    <button id="bd-close" class="btn ghost">✕ Close</button>
+  </div>
+</div>
+
 <!-- ============ STATS SCREEN ============ -->
 <section id="screen-stats" class="screen">
   <header class="topbar">
@@ -138,6 +169,14 @@
   <div class="card">
     <label for="stats-athlete">Athlete</label>
     <select id="stats-athlete"></select>
+    <div class="target-row">
+      <span>Show:</span>
+      <div class="seg" id="stats-filter">
+        <button class="seg-btn active" data-filter="all">All</button>
+        <button class="seg-btn" data-filter="training">🏋 Training</button>
+        <button class="seg-btn" data-filter="competition">🏆 Competition</button>
+      </div>
+    </div>
   </div>
 
   <div class="card" id="stats-summary-card">

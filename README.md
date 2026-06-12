@@ -7,7 +7,8 @@ keeps score, stores everything, and builds statistics per athlete.
 ## Workflow
 
 1. **Setup** — enter the two fencers' names (previously used names are
-   suggested automatically) and pick the bout length (5 or 15 touches).
+   suggested automatically), pick the bout length (5 or 15 touches) and
+   whether it's a 🏋 training or 🏆 competition bout.
 2. **Bout** — a 14 m piste is shown with centre line, on-guard lines and the
    2 m warning zones. Tap where the touch happened, then answer two quick
    questions: *who scored?* and *attack or defence?*
@@ -25,7 +26,12 @@ Pick any athlete to see:
 - a **touch map** on the piste, normalised so the athlete's own end is always
   on the left — shows where they score (attack/defence) and where they concede
 - a histogram of touches per 2 m piste zone and the average scoring position
-- full bout history
+- full bout history, filterable by training/competition
+
+Tap any bout in a list to open its **individual breakdown**: final score,
+touch map for that bout (border colour = which fencer scored), attack/defence
+counts per fencer, and a touch-by-touch timeline with positions and the
+running score.
 
 Data can be exported as **JSON** or **CSV** for further analysis.
 

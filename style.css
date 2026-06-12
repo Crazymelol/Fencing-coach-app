@@ -182,6 +182,21 @@ input[type=text], select {
 .btn.choice.attack { background: var(--attack); color: #2a1500; }
 .btn.choice.defence { background: var(--defence); color: #00253a; }
 .summary { color: var(--muted); white-space: pre-line; }
+.dialog.detail { max-width: 560px; max-height: 92vh; overflow-y: auto; }
+
+/* ---------- bout detail ---------- */
+.marker.by-left { border: 3px solid var(--red); }
+.marker.by-right { border: 3px solid var(--green); }
+.touch-list { display: flex; flex-direction: column; gap: 4px; max-height: 32vh; overflow-y: auto; }
+.touch-row {
+  display: grid; grid-template-columns: 2em 1fr 6.5em 3.5em 3em;
+  gap: 6px; align-items: center; text-align: left;
+  background: var(--card2); border-radius: 8px; padding: 6px 10px; font-size: .85rem;
+}
+.touch-row .tn { color: var(--muted); }
+.touch-row .tw { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.touch-row .tm { color: var(--muted); text-align: right; }
+.touch-row .res { font-weight: 700; text-align: right; }
 
 /* ---------- stats ---------- */
 .stat-grid {
@@ -208,7 +223,9 @@ input[type=text], select {
 .bout-item {
   display: flex; justify-content: space-between; align-items: center;
   background: var(--card2); border-radius: 10px; padding: 10px 14px; font-size: .95rem;
+  cursor: pointer;
 }
+.bout-item:active { filter: brightness(1.25); }
 .bout-item .res { font-weight: 800; font-variant-numeric: tabular-nums; }
 .bout-item .meta { color: var(--muted); font-size: .78rem; }
 .empty { color: var(--muted); font-size: .9rem; padding: 8px 0; }

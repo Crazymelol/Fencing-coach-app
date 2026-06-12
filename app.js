@@ -46,6 +46,7 @@ const boutToRow = (b) => ({
   left_name: b.left,
   right_name: b.right,
   target: b.target,
+  context: b.context || "training",
   started_at: new Date(b.startedAt).toISOString(),
   ended_at: b.endedAt ? new Date(b.endedAt).toISOString() : null,
   winner: b.winner,
@@ -56,6 +57,7 @@ const rowToBout = (r) => ({
   left: r.left_name,
   right: r.right_name,
   target: r.target,
+  context: r.context || "training",
   startedAt: Date.parse(r.started_at),
   endedAt: r.ended_at ? Date.parse(r.ended_at) : null,
   winner: r.winner,
@@ -146,6 +148,7 @@ function fmtDate(ts) {
   return new Date(ts).toLocaleDateString(undefined, { day: "numeric", month: "short" }) +
     " " + new Date(ts).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
 }
+const ctxBadge = (b) => ((b.context || "training") === "competition" ? "🏆" : "🏋");
 
 // ---------- setup screen ----------
 let target = 5;
@@ -158,6 +161,16 @@ $("target-seg").addEventListener("click", (e) => {
   );
 });
 
+let context = "training";
+$("context-seg").addEventListener("click", (e) => {
+  const btn = e.target.closest(".seg-btn");
+  if (!btn) return;
+  context = btn.dataset.context;
+  document.querySelectorAll("#context-seg .seg-btn").forEach((b) =>
+    b.classList.toggle("active", b === btn)
+  );
+});
+
 function renderSetup() {
   const dl = $("athlete-list");
   dl.innerHTML = athleteNames().map((n) => `<option value="${n}">`).join("");
@@ -166,8 +179,8 @@ function renderSetup() {
   $("recent-card").classList.toggle("hidden", recent.length === 0);
   $("recent-bouts").innerHTML = recent.map((b) => {
     const s = boutScore(b);
-    return `<div class="bout-item">
-      <span>${b.left} vs ${b.right}</span>
+    return `<div class="bout-item" data-id="${b.id}">
+      <span>${ctxBadge(b)} ${b.left} vs ${b.right}</span>
       <span class="res">${s.l} – ${s.r}</span>
       <span class="meta">${fmtDate(b.startedAt)}</span>
     </div>`;
@@ -186,7 +199,7 @@ $("btn-start").addEventListener("click", () => {
 function startBout(left, right) {
   bout = {
     id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-    left, right, target,
+    left, right, target, context,
     startedAt: Date.now(),
     endedAt: null,
     winner: null,
@@ -319,6 +332,19 @@ $("btn-view-stats").addEventListener("click", () => {
 });
 
 // ---------- statistics ----------
+let statsFilter = "all";
+$("stats-filter").addEventListener("click", (e) => {
+  const btn = e.target.closest(".seg-btn");
+  if (!btn) return;
+  statsFilter = btn.dataset.filter;
+  document.querySelectorAll("#stats-filter .seg-btn").forEach((b) =>
+    b.classList.toggle("active", b === btn)
+  );
+  renderAthleteStats();
+});
+const filteredBouts = () =>
+  data.bouts.filter((b) => statsFilter === "all" || (b.context || "training") === statsFilter);
+
 function athleteStats(name) {
   const st = {
     bouts: 0, wins: 0,
@@ -331,7 +357,7 @@ function athleteStats(name) {
     avgX: 0,
   };
   let sumX = 0;
-  data.bouts.forEach((b) => {
+  filteredBouts().forEach((b) => {
     const side = b.left === name ? "left" : b.right === name ? "right" : null;
     if (!side) return;
     st.bouts++;
@@ -420,21 +446,76 @@ function renderAthleteStats() {
     </div>`
   ).join("");
 
-  // bout history for this athlete
-  const hist = data.bouts.filter((b) => b.left === name || b.right === name).slice().reverse();
+  // bout history for this athlete (tap a bout for its own breakdown)
+  const hist = filteredBouts().filter((b) => b.left === name || b.right === name).slice().reverse();
   boutsList.innerHTML = hist.map((b) => {
     const s = boutScore(b);
     const won = b.winner === name;
     const opp = b.left === name ? b.right : b.left;
     const own = b.left === name ? s.l : s.r;
     const oth = b.left === name ? s.r : s.l;
-    return `<div class="bout-item">
-      <span>${won ? "✅" : b.winner ? "❌" : "➖"} vs ${opp}</span>
+    return `<div class="bout-item" data-id="${b.id}">
+      <span>${won ? "✅" : b.winner ? "❌" : "➖"} ${ctxBadge(b)} vs ${opp}</span>
       <span class="res">${own} – ${oth}</span>
       <span class="meta">${fmtDate(b.startedAt)}</span>
     </div>`;
   }).join("") || `<p class="empty">No bouts yet.</p>`;
 }
+
+// ---------- bout detail ----------
+function openBoutDetail(id) {
+  const b = data.bouts.find((x) => x.id === id);
+  if (!b) return;
+  const s = boutScore(b);
+
+  $("bd-title").textContent = `${b.left} ${s.l} – ${s.r} ${b.right}`;
+  $("bd-meta").textContent =
+    `${ctxBadge(b)} ${(b.context || "training") === "competition" ? "Competition" : "Training"}` +
+    ` · to ${b.target} · ${fmtDate(b.startedAt)}` +
+    (b.winner ? `\nWinner: ${b.winner}` : "");
+  $("bd-label-left").textContent = b.left.toUpperCase();
+  $("bd-label-right").textContent = b.right.toUpperCase();
+
+  const markers = $("bd-markers");
+  markers.innerHTML = "";
+  b.touches.forEach((t, i) => {
+    const m = document.createElement("div");
+    m.className = `marker ${t.action} by-${t.scorer}`;
+    m.style.left = (t.x / PISTE_LEN) * 100 + "%";
+    m.style.top = 20 + ((i * 23) % 61) + "%";
+    markers.appendChild(m);
+  });
+
+  const count = (side, action) => b.touches.filter((t) => t.scorer === side && t.action === action).length;
+  $("bd-stats").innerHTML = [
+    [count("left", "attack"), `${b.left} ⚔ attack`],
+    [count("left", "defence"), `${b.left} 🛡 defence`],
+    [count("right", "attack"), `${b.right} ⚔ attack`],
+    [count("right", "defence"), `${b.right} 🛡 defence`],
+  ].map(([v, l]) => `<div class="stat"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("");
+
+  let l = 0, r = 0;
+  $("bd-touches").innerHTML = b.touches.map((t, i) => {
+    t.scorer === "left" ? l++ : r++;
+    const who = t.scorer === "left" ? `🔴 ${b.left}` : `🟢 ${b.right}`;
+    return `<div class="touch-row">
+      <span class="tn">${i + 1}</span>
+      <span class="tw">${who}</span>
+      <span>${t.action === "attack" ? "⚔️ Attack" : "🛡️ Defence"}</span>
+      <span class="tm">${(+t.x).toFixed(1)} m</span>
+      <span class="res">${l}–${r}</span>
+    </div>`;
+  }).join("") || `<p class="empty">No touches recorded.</p>`;
+
+  $("dlg-boutdetail").classList.remove("hidden");
+}
+$("bd-close").addEventListener("click", () => $("dlg-boutdetail").classList.add("hidden"));
+["recent-bouts", "stats-bouts"].forEach((listId) =>
+  $(listId).addEventListener("click", (e) => {
+    const item = e.target.closest(".bout-item");
+    if (item) openBoutDetail(item.dataset.id);
+  })
+);
 
 // ---------- export / clear ----------
 function download(filename, text, type) {
@@ -448,10 +529,10 @@ $("btn-export").addEventListener("click", () =>
   download("fencing-data.json", JSON.stringify(data, null, 2), "application/json")
 );
 $("btn-export-csv").addEventListener("click", () => {
-  const rows = [["bout_id", "date", "left", "right", "target", "touch_no", "position_m", "scorer", "action"]];
+  const rows = [["bout_id", "date", "context", "left", "right", "target", "touch_no", "position_m", "scorer", "action"]];
   data.bouts.forEach((b) =>
     b.touches.forEach((t, i) =>
-      rows.push([b.id, new Date(b.startedAt).toISOString(), b.left, b.right, b.target,
+      rows.push([b.id, new Date(b.startedAt).toISOString(), b.context || "training", b.left, b.right, b.target,
         i + 1, t.x, t.scorer === "left" ? b.left : b.right, t.action])
     )
   );
