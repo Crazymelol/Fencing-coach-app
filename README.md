@@ -31,9 +31,16 @@ Data can be exported as **JSON** or **CSV** for further analysis.
 
 ## Storage
 
-All data is stored in the browser's `localStorage` — no server, no account,
-works offline. Clearing browser data (or the "Clear all data" button) erases it,
-so export regularly if you need a backup.
+Bouts are stored **online** in a Supabase Postgres database (table `bouts`),
+so every device sees the same club data and nothing is lost if a tablet is
+wiped. The app also keeps a `localStorage` cache: if you record bouts with no
+internet connection they are saved locally and pushed automatically the next
+time the app is online (a status line at the top shows the sync state).
+
+The app talks to Supabase with its public *publishable* key and open
+row-level-security policies — anyone using the app shares one club database.
+If you ever need per-coach accounts, add Supabase Auth and tighten the RLS
+policies.
 
 ## Running it
 

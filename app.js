@@ -1,13 +1,17 @@
 /* Fencing Coach — Touch Recorder
  *
- * Data model (localStorage "fencing-coach-data"):
+ * Data model:
  * {
  *   bouts: [{
- *     id, left, right, target, startedAt, endedAt, winner,
+ *     id, left, right, target, startedAt, endedAt, winner, synced,
  *     touches: [{ x, scorer: "left"|"right", action: "attack"|"defence", t }]
  *   }]
  * }
  * x is the touch position in metres from the left end of the 14 m piste.
+ *
+ * Bouts live in a Supabase table ("bouts") shared by every device.
+ * localStorage is an offline cache: bouts recorded without connectivity are
+ * kept with synced=false and pushed the next time the cloud is reachable.
  */
 
 const STORAGE_KEY = "fencing-coach-data";
@@ -30,6 +34,86 @@ function saveData() {
 }
 
 let data = loadData();
+
+// ---------- cloud storage (Supabase) ----------
+const SUPABASE_URL = "https://qrpwtuztfamukrcnkpwc.supabase.co";
+const SUPABASE_KEY = "sb_publishable_K94YBKPiFbcq-zz9xrzJfA_idTVFYQt";
+const BOUTS_API = SUPABASE_URL + "/rest/v1/bouts";
+const API_HEADERS = { apikey: SUPABASE_KEY, "Content-Type": "application/json" };
+
+const boutToRow = (b) => ({
+  id: b.id,
+  left_name: b.left,
+  right_name: b.right,
+  target: b.target,
+  started_at: new Date(b.startedAt).toISOString(),
+  ended_at: b.endedAt ? new Date(b.endedAt).toISOString() : null,
+  winner: b.winner,
+  touches: b.touches,
+});
+const rowToBout = (r) => ({
+  id: r.id,
+  left: r.left_name,
+  right: r.right_name,
+  target: r.target,
+  startedAt: Date.parse(r.started_at),
+  endedAt: r.ended_at ? Date.parse(r.ended_at) : null,
+  winner: r.winner,
+  touches: r.touches || [],
+  synced: true,
+});
+
+async function cloudFetchAll() {
+  const res = await fetch(BOUTS_API + "?select=*&order=started_at.asc", { headers: API_HEADERS });
+  if (!res.ok) throw new Error("cloud fetch failed: " + res.status);
+  return (await res.json()).map(rowToBout);
+}
+async function cloudInsert(b) {
+  const res = await fetch(BOUTS_API, {
+    method: "POST",
+    headers: { ...API_HEADERS, Prefer: "resolution=ignore-duplicates" },
+    body: JSON.stringify(boutToRow(b)),
+  });
+  if (!res.ok) throw new Error("cloud insert failed: " + res.status);
+}
+async function cloudDeleteAll() {
+  const res = await fetch(BOUTS_API + "?id=like.*", { method: "DELETE", headers: API_HEADERS });
+  if (!res.ok) throw new Error("cloud delete failed: " + res.status);
+}
+
+function setCloudStatus(state, msg) {
+  document.querySelectorAll(".cloud-status").forEach((el) => {
+    el.dataset.state = state;
+    el.textContent = msg;
+  });
+}
+
+let syncing = false;
+async function syncWithCloud() {
+  if (syncing) return;
+  syncing = true;
+  setCloudStatus("sync", "☁ Syncing…");
+  try {
+    for (const b of data.bouts.filter((x) => !x.synced)) {
+      await cloudInsert(b);
+      b.synced = true;
+    }
+    const cloud = await cloudFetchAll();
+    const cloudIds = new Set(cloud.map((b) => b.id));
+    const pending = data.bouts.filter((b) => !b.synced && !cloudIds.has(b.id));
+    data.bouts = [...cloud, ...pending].sort((a, b) => a.startedAt - b.startedAt);
+    saveData();
+    setCloudStatus("ok", `☁ Online — ${data.bouts.length} bouts in club database`);
+    if ($("screen-setup").classList.contains("active")) renderSetup();
+    if ($("screen-stats").classList.contains("active")) renderStats();
+  } catch (e) {
+    const pending = data.bouts.filter((b) => !b.synced).length;
+    setCloudStatus("err", "⚠ Offline — saving on this device" + (pending ? `, ${pending} bout(s) waiting to sync` : ""));
+  } finally {
+    syncing = false;
+  }
+}
+window.addEventListener("online", syncWithCloud);
 
 // ---------- app state ----------
 let bout = null;          // current bout in progress
@@ -206,8 +290,10 @@ function endBout() {
   const s = boutScore(bout);
   bout.endedAt = Date.now();
   bout.winner = s.l === s.r ? null : (s.l > s.r ? bout.left : bout.right);
+  bout.synced = false;
   data.bouts.push(bout);
   saveData();
+  syncWithCloud();
 
   $("boutend-summary").textContent =
     `${bout.left} ${s.l} – ${s.r} ${bout.right}\n` +
@@ -371,12 +457,20 @@ $("btn-export-csv").addEventListener("click", () => {
   );
   download("fencing-data.csv", rows.map((r) => r.join(",")).join("\n"), "text/csv");
 });
-$("btn-clear").addEventListener("click", () => {
-  if (!confirm("Delete ALL recorded bouts and statistics? This cannot be undone.")) return;
+$("btn-clear").addEventListener("click", async () => {
+  if (!confirm("Delete ALL recorded bouts and statistics for EVERY device? This cannot be undone.")) return;
+  try {
+    await cloudDeleteAll();
+  } catch (e) {
+    alert("Could not reach the online database — nothing was deleted. Try again when online.");
+    return;
+  }
   data = { bouts: [] };
   saveData();
   renderStats();
+  setCloudStatus("ok", "☁ Online — 0 bouts in club database");
 });
 
 // ---------- init ----------
 show("setup");
+syncWithCloud();
