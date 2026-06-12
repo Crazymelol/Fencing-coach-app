@@ -44,14 +44,15 @@ policies.
 
 ## Running it
 
-It's a static site — no build step:
+**Live now** (served straight from this public repo via githack):
 
-```bash
-# any static server works, e.g.
-python3 -m http.server 8000
-# then open http://localhost:8000
-```
+> https://raw.githack.com/Crazymelol/Fencing-coach-app/claude/fencing-touch-recorder-2b7uo9/index.html
 
-or simply open `index.html` in a browser, or host the repo on GitHub Pages.
+For a permanent address, enable GitHub Pages once: repo **Settings →
+Pages → Deploy from a branch**, pick this branch and `/ (root)` — the app
+will then be at `https://crazymelol.github.io/Fencing-coach-app/`.
+
+It's a static site with no build step, so any static server also works
+(`python3 -m http.server`), or just open `index.html` in a browser.
 Designed for tablets/phones (large touch targets, responsive layout) but works
 on desktop too.
