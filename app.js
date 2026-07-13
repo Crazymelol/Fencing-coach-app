@@ -396,7 +396,8 @@ function athleteStats(name) {
     markers: [],          // touches scored: {x, action}
     receivedMarkers: [],  // touches conceded: {x}
     zones: new Array(ZONE_LABELS.length).fill(0),
-    subtypes: { attack: {}, defence: {} }, // scored touches by specific type
+    subtypes: { attack: {}, defence: {} },         // scored touches by specific type
+    receivedSubtypes: { attack: {}, defence: {} }, // conceded touches by opponent's type
     clinchers: {},        // winning-touch type -> count (bouts this athlete won)
     avgX: 0,
   };
@@ -420,6 +421,8 @@ function athleteStats(name) {
       } else {
         st.received++;
         st.receivedMarkers.push({ x });
+        const rkey = t.subtype || "other";
+        st.receivedSubtypes[t.action][rkey] = (st.receivedSubtypes[t.action][rkey] || 0) + 1;
       }
     });
     // the last touch reached target and ended the bout — if this athlete scored it, it's a clincher
@@ -431,6 +434,14 @@ function athleteStats(name) {
   });
   st.avgX = st.scored ? sumX / st.scored : 0;
   st.topClincher = topEntry(st.clinchers);
+  // flatten received types into labelled counts to find the most-conceded action
+  const concededLabelled = {};
+  ["attack", "defence"].forEach((action) =>
+    Object.entries(st.receivedSubtypes[action]).forEach(([k, c]) => {
+      concededLabelled[subtypeLabelFor(action, k)] = c;
+    })
+  );
+  st.topConceded = topEntry(concededLabelled);
   return st;
 }
 
@@ -474,6 +485,9 @@ function renderAthleteStats() {
     $("type-clincher").textContent = "";
     $("type-attack").innerHTML = "";
     $("type-defence").innerHTML = "";
+    $("weak-conceded").textContent = "";
+    $("weak-attack").innerHTML = "";
+    $("weak-defence").innerHTML = "";
     return;
   }
 
@@ -515,18 +529,18 @@ function renderAthleteStats() {
     </div>`
   ).join("");
 
-  // action-type breakdown + best closer
+  // action-type breakdown + best closer (offensive profile)
   $("type-clincher").textContent = st.topClincher
     ? `🏆 Best closer: ${st.topClincher.key} (${st.topClincher.count} winning touch${st.topClincher.count > 1 ? "es" : ""})`
     : "🏆 Best closer: — (no wins yet)";
-  const renderTypeBars = (elId, action) => {
-    const counts = st.subtypes[action];
+  const renderTypeBars = (elId, action, subtypesObj, emptyMsg) => {
+    const counts = subtypesObj[action];
     // fixed order from SUBTYPE_LABELS, plus any legacy "other"
     const keys = [...Object.keys(SUBTYPE_LABELS[action])];
     if (counts.other) keys.push("other");
     const groupMax = Math.max(1, ...keys.map((k) => counts[k] || 0));
-    const anyScored = keys.some((k) => counts[k]);
-    $(elId).innerHTML = anyScored
+    const any = keys.some((k) => counts[k]);
+    $(elId).innerHTML = any
       ? keys.map((k) => {
           const c = counts[k] || 0;
           const top = c > 0 && c === groupMax;
@@ -536,10 +550,17 @@ function renderAthleteStats() {
             <span class="tc">${c}</span>
           </div>`;
         }).join("")
-      : `<p class="empty">None yet.</p>`;
+      : `<p class="empty">${emptyMsg}</p>`;
   };
-  renderTypeBars("type-attack", "attack");
-  renderTypeBars("type-defence", "defence");
+  renderTypeBars("type-attack", "attack", st.subtypes, "None yet.");
+  renderTypeBars("type-defence", "defence", st.subtypes, "None yet.");
+
+  // defensive weak spots — types opponents score against this fencer
+  $("weak-conceded").textContent = st.topConceded
+    ? `⚠️ Most conceded: ${st.topConceded.key} (${st.topConceded.count} touch${st.topConceded.count > 1 ? "es" : ""})`
+    : "⚠️ Most conceded: — (none conceded)";
+  renderTypeBars("weak-attack", "attack", st.receivedSubtypes, "None conceded.");
+  renderTypeBars("weak-defence", "defence", st.receivedSubtypes, "None conceded.");
 
   // bout history for this athlete (tap a bout for its own breakdown)
   const hist = filteredBouts().filter((b) => b.left === name || b.right === name).slice().reverse();
