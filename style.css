@@ -122,6 +122,7 @@ input[type=text], select {
   overflow: hidden;
 }
 .piste.mini { height: 130px; cursor: default; }
+.piste.mini.bd { height: 172px; }
 .piste .zone.warn {
   position: absolute; top: 0; bottom: 0; width: calc(100% * 2 / 14);
   background: repeating-linear-gradient(45deg, rgba(180,40,40,.35) 0 10px, rgba(180,40,40,.15) 10px 20px);
@@ -187,6 +188,12 @@ input[type=text], select {
 /* ---------- bout detail ---------- */
 .marker.by-left { border: 3px solid var(--red); }
 .marker.by-right { border: 3px solid var(--green); }
+#bd-markers .marker { pointer-events: auto; cursor: pointer; }
+.marker.hi { box-shadow: 0 0 0 4px rgba(79,140,255,.9); z-index: 2; }
+.touch-row.hi { outline: 2px solid var(--accent); }
+.bd-filters { display: flex; flex-direction: column; gap: 4px; }
+.bd-filters .target-row { margin-top: 6px; font-size: .9rem; }
+.bd-filters .seg-btn { padding: 8px 12px; font-size: .85rem; }
 .touch-list { display: flex; flex-direction: column; gap: 4px; max-height: 32vh; overflow-y: auto; }
 .touch-row {
   display: grid; grid-template-columns: 2em 1fr 6.5em 3.5em 3em;

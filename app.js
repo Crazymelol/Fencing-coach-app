@@ -330,6 +330,9 @@ $("btn-view-stats").addEventListener("click", () => {
   $("dlg-boutend").classList.add("hidden");
   show("stats");
 });
+$("btn-bout-breakdown").addEventListener("click", () => {
+  if (bout) openBoutDetail(bout.id); // the finished bout is still referenced; detail stacks over this popup
+});
 
 // ---------- statistics ----------
 let statsFilter = "all";
@@ -463,9 +466,14 @@ function renderAthleteStats() {
 }
 
 // ---------- bout detail ----------
+let bdBout = null;                                   // bout currently shown in the detail dialog
+let bdFilter = { fencer: "all", action: "all" };     // marker/row filter
+
 function openBoutDetail(id) {
   const b = data.bouts.find((x) => x.id === id);
   if (!b) return;
+  bdBout = b;
+  bdFilter = { fencer: "all", action: "all" };
   const s = boutScore(b);
 
   $("bd-title").textContent = `${b.left} ${s.l} – ${s.r} ${b.right}`;
@@ -476,15 +484,14 @@ function openBoutDetail(id) {
   $("bd-label-left").textContent = b.left.toUpperCase();
   $("bd-label-right").textContent = b.right.toUpperCase();
 
-  const markers = $("bd-markers");
-  markers.innerHTML = "";
-  b.touches.forEach((t, i) => {
-    const m = document.createElement("div");
-    m.className = `marker ${t.action} by-${t.scorer}`;
-    m.style.left = (t.x / PISTE_LEN) * 100 + "%";
-    m.style.top = 20 + ((i * 23) % 61) + "%";
-    markers.appendChild(m);
-  });
+  // fencer filter labels come from this bout
+  $("bd-fencer-left").textContent = "🔴 " + b.left;
+  $("bd-fencer-right").textContent = "🟢 " + b.right;
+  // reset the filter segments to "All"
+  document.querySelectorAll("#bd-filter-fencer .seg-btn").forEach((x) =>
+    x.classList.toggle("active", x.dataset.fencer === "all"));
+  document.querySelectorAll("#bd-filter-action .seg-btn").forEach((x) =>
+    x.classList.toggle("active", x.dataset.action === "all"));
 
   const count = (side, action) => b.touches.filter((t) => t.scorer === side && t.action === action).length;
   $("bd-stats").innerHTML = [
@@ -494,21 +501,82 @@ function openBoutDetail(id) {
     [count("right", "defence"), `${b.right} 🛡 defence`],
   ].map(([v, l]) => `<div class="stat"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("");
 
+  renderBdTouches();
+  $("dlg-boutdetail").classList.remove("hidden");
+}
+
+// draw markers + touch rows for bdBout, honouring bdFilter (running score stays true across all touches)
+function renderBdTouches() {
+  const b = bdBout;
+  if (!b) return;
+  const passes = (t) =>
+    (bdFilter.fencer === "all" || t.scorer === bdFilter.fencer) &&
+    (bdFilter.action === "all" || t.action === bdFilter.action);
+
+  const markers = $("bd-markers");
+  markers.innerHTML = "";
+  b.touches.forEach((t, i) => {
+    if (!passes(t)) return;
+    const m = document.createElement("div");
+    m.className = `marker ${t.action} by-${t.scorer}`;
+    m.dataset.i = i;
+    m.style.left = (t.x / PISTE_LEN) * 100 + "%";
+    m.style.top = 20 + ((i * 23) % 61) + "%";
+    markers.appendChild(m);
+  });
+
   let l = 0, r = 0;
-  $("bd-touches").innerHTML = b.touches.map((t, i) => {
-    t.scorer === "left" ? l++ : r++;
+  const rows = [];
+  b.touches.forEach((t, i) => {
+    t.scorer === "left" ? l++ : r++;            // running score counts every touch
+    if (!passes(t)) return;
     const who = t.scorer === "left" ? `🔴 ${b.left}` : `🟢 ${b.right}`;
-    return `<div class="touch-row">
+    rows.push(`<div class="touch-row" data-i="${i}">
       <span class="tn">${i + 1}</span>
       <span class="tw">${who}</span>
       <span>${t.action === "attack" ? "⚔️ Attack" : "🛡️ Defence"}</span>
       <span class="tm">${(+t.x).toFixed(1)} m</span>
       <span class="res">${l}–${r}</span>
-    </div>`;
-  }).join("") || `<p class="empty">No touches recorded.</p>`;
-
-  $("dlg-boutdetail").classList.remove("hidden");
+    </div>`);
+  });
+  $("bd-touches").innerHTML = rows.join("") ||
+    `<p class="empty">No touches match this filter.</p>`;
 }
+
+// highlight a marker + its touch row together
+function highlightTouch(i) {
+  document.querySelectorAll("#bd-markers .marker.hi, #bd-touches .touch-row.hi")
+    .forEach((el) => el.classList.remove("hi"));
+  const m = $("bd-markers").querySelector(`.marker[data-i="${i}"]`);
+  const row = $("bd-touches").querySelector(`.touch-row[data-i="${i}"]`);
+  if (m) m.classList.add("hi");
+  if (row) { row.classList.add("hi"); if (row.scrollIntoView) row.scrollIntoView({ block: "nearest" }); }
+}
+
+$("bd-markers").addEventListener("click", (e) => {
+  const m = e.target.closest(".marker");
+  if (m) highlightTouch(+m.dataset.i);
+});
+$("bd-touches").addEventListener("click", (e) => {
+  const row = e.target.closest(".touch-row");
+  if (row) highlightTouch(+row.dataset.i);
+});
+
+$("bd-filter-fencer").addEventListener("click", (e) => {
+  const btn = e.target.closest(".seg-btn");
+  if (!btn) return;
+  bdFilter.fencer = btn.dataset.fencer;
+  document.querySelectorAll("#bd-filter-fencer .seg-btn").forEach((b) => b.classList.toggle("active", b === btn));
+  renderBdTouches();
+});
+$("bd-filter-action").addEventListener("click", (e) => {
+  const btn = e.target.closest(".seg-btn");
+  if (!btn) return;
+  bdFilter.action = btn.dataset.action;
+  document.querySelectorAll("#bd-filter-action .seg-btn").forEach((b) => b.classList.toggle("active", b === btn));
+  renderBdTouches();
+});
+
 $("bd-close").addEventListener("click", () => $("dlg-boutdetail").classList.add("hidden"));
 ["recent-bouts", "stats-bouts"].forEach((listId) =>
   $(listId).addEventListener("click", (e) => {

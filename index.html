@@ -129,6 +129,7 @@
   <div class="dialog">
     <h3>🏆 Bout finished</h3>
     <p id="boutend-summary" class="summary"></p>
+    <button id="btn-bout-breakdown" class="btn">🎯 See this bout's breakdown</button>
     <button id="btn-next-bout" class="btn primary big">Next bout ▶</button>
     <button id="btn-rematch" class="btn">🔁 Rematch (same fencers, swap sides)</button>
     <button id="btn-view-stats" class="btn ghost">📊 View statistics</button>
@@ -141,7 +142,7 @@
     <h3 id="bd-title"></h3>
     <p id="bd-meta" class="summary"></p>
     <div class="piste-wrap small">
-      <div class="piste mini">
+      <div class="piste mini bd">
         <div class="zone warn left"></div>
         <div class="zone warn right"></div>
         <div class="line center"></div>
@@ -150,6 +151,24 @@
         <div class="piste-label left-label" id="bd-label-left"></div>
         <div class="piste-label right-label" id="bd-label-right"></div>
         <div id="bd-markers"></div>
+      </div>
+    </div>
+    <div class="bd-filters">
+      <div class="target-row">
+        <span>Fencer:</span>
+        <div class="seg" id="bd-filter-fencer">
+          <button class="seg-btn active" data-fencer="all">All</button>
+          <button class="seg-btn" data-fencer="left" id="bd-fencer-left"></button>
+          <button class="seg-btn" data-fencer="right" id="bd-fencer-right"></button>
+        </div>
+      </div>
+      <div class="target-row">
+        <span>Action:</span>
+        <div class="seg" id="bd-filter-action">
+          <button class="seg-btn active" data-action="all">All</button>
+          <button class="seg-btn" data-action="attack">⚔️ Attack</button>
+          <button class="seg-btn" data-action="defence">🛡️ Defence</button>
+        </div>
       </div>
     </div>
     <div id="bd-stats" class="stat-grid"></div>
