@@ -129,6 +129,7 @@ function show(screen) {
   $("screen-" + screen).classList.add("active");
   if (screen === "setup") renderSetup();
   if (screen === "stats") renderStats();
+  if (screen === "scout") renderScout();
 }
 document.querySelectorAll("[data-nav]").forEach((b) =>
   b.addEventListener("click", () => show(b.dataset.nav))
@@ -387,7 +388,7 @@ $("stats-filter").addEventListener("click", (e) => {
 const filteredBouts = () =>
   data.bouts.filter((b) => statsFilter === "all" || (b.context || "training") === statsFilter);
 
-function athleteStats(name) {
+function athleteStats(name, bouts = filteredBouts()) {
   const st = {
     bouts: 0, wins: 0,
     scored: 0, received: 0,
@@ -402,7 +403,7 @@ function athleteStats(name) {
     avgX: 0,
   };
   let sumX = 0;
-  filteredBouts().forEach((b) => {
+  bouts.forEach((b) => {
     const side = b.left === name ? "left" : b.right === name ? "right" : null;
     if (!side) return;
     st.bouts++;
@@ -457,6 +458,21 @@ function subtypeLabelFor(action, key) {
   return (SUBTYPE_LABELS[action] && SUBTYPE_LABELS[action][key]) ||
     (key === "other" ? "Unspecified" : key);
 }
+// most-used type across a { attack:{}, defence:{} } map, as { key: label, count }
+function topLabelled(subtypesObj) {
+  const labelled = {};
+  ["attack", "defence"].forEach((a) =>
+    Object.entries(subtypesObj[a]).forEach(([k, c]) => { labelled[subtypeLabelFor(a, k)] = c; })
+  );
+  return topEntry(labelled);
+}
+// label of the busiest piste zone, or "—"
+function topZone(zones) {
+  let bi = -1, bv = 0;
+  zones.forEach((c, i) => { if (c > bv) { bv = c; bi = i; } });
+  return bi >= 0 ? ZONE_LABELS[bi] : "—";
+}
+const pctOf = (n, d) => (d ? Math.round((n / d) * 100) + "%" : "—");
 
 function renderStats() {
   const names = athleteNames();
@@ -691,12 +707,132 @@ $("bd-filter-action").addEventListener("click", (e) => {
 });
 
 $("bd-close").addEventListener("click", () => $("dlg-boutdetail").classList.add("hidden"));
-["recent-bouts", "stats-bouts"].forEach((listId) =>
+["recent-bouts", "stats-bouts", "h2h-bouts"].forEach((listId) =>
   $(listId).addEventListener("click", (e) => {
     const item = e.target.closest(".bout-item");
     if (item) openBoutDetail(item.dataset.id);
   })
 );
+
+// ---------- scouting / game plan ----------
+function renderScout() {
+  const names = athleteNames();
+  const fSel = $("scout-fencer");
+  const vSel = $("scout-vs");
+  const prevF = fSel.value;
+  const prevV = vSel.value;
+  fSel.innerHTML = names.length
+    ? names.map((n) => `<option ${n === prevF ? "selected" : ""}>${n}</option>`).join("")
+    : `<option disabled selected>— no data yet —</option>`;
+  vSel.innerHTML = `<option value="" ${!prevV ? "selected" : ""}>— none —</option>` +
+    names.map((n) => `<option ${n === prevV ? "selected" : ""}>${n}</option>`).join("");
+  renderScoutReport();
+}
+$("scout-fencer").addEventListener("change", renderScoutReport);
+$("scout-vs").addEventListener("change", renderScoutReport);
+
+function renderScoutReport() {
+  const name = $("scout-fencer").value;
+  const report = $("scout-report");
+  if (!name || !athleteNames().includes(name)) {
+    $("scout-name").textContent = "";
+    $("scout-sample").textContent = "";
+    $("scout-keys").innerHTML = `<p class="empty">Record some bouts first — a scouting report will appear here.</p>`;
+    $("scout-plan").innerHTML = "";
+    $("scout-h2h").classList.add("hidden");
+    return;
+  }
+  // scout over ALL bouts, every context — the more data, the better the read
+  const st = athleteStats(name, data.bouts);
+  $("scout-name").textContent = `Scouting: ${name}`;
+  $("scout-sample").textContent =
+    `Based on ${st.bouts} bout${st.bouts !== 1 ? "s" : ""} · ${st.scored} scoring touches` +
+    (st.bouts < 3 ? " — limited data, treat as an early read." : "");
+
+  const main = topLabelled(st.subtypes);
+  const weak = st.topConceded;
+  const closer = st.topClincher;
+  const attackPct = st.scored ? st.attack / st.scored : 0;
+  const style = !st.scored ? "—"
+    : attackPct >= 0.6 ? `Attack-oriented (${pctOf(st.attack, st.scored)} attacks)`
+    : attackPct <= 0.4 ? `Defence/counter-oriented (${pctOf(st.defence, st.scored)} defence)`
+    : "Balanced attack & defence";
+
+  $("scout-keys").innerHTML = [
+    ["🗡️ Main weapon", main ? `${main.key} (${pctOf(main.count, st.scored)})` : "—"],
+    ["📍 Favourite zone", st.scored ? `${topZone(st.zones)} · avg ${st.avgX.toFixed(1)} m` : "—"],
+    ["🏆 Closes with", closer ? `${closer.key} (${closer.count})` : "—"],
+    ["🎯 Concedes most to", weak ? `${weak.key} (${weak.count})` : "—"],
+    ["⚔️/🛡️ Style", style],
+  ].map(([k, v]) => `<div class="kv"><span class="k">${k}</span><span class="v">${v}</span></div>`).join("");
+
+  $("scout-plan").innerHTML = gamePlan(name, st).map((s) => `<li>${s}</li>`).join("");
+  renderH2H(name);
+}
+
+// rule-based tactical suggestions from a scouted fencer's stats
+function gamePlan(name, st) {
+  if (!st.scored) return [`Not enough data on ${name} yet — record a few bouts to build a game plan.`];
+  const tips = [];
+  const main = topLabelled(st.subtypes);
+  const weak = st.topConceded;
+  const attackPct = st.attack / st.scored;
+  if (main) tips.push(`Their go-to is <b>${main.key}</b> (${pctOf(main.count, st.scored)} of their touches) — be ready for it and don't feed that action.`);
+  if (attackPct >= 0.6) tips.push(`They score mostly on the <b>attack</b> — hold distance, stay patient, and look to counter-attack or take the blade.`);
+  else if (attackPct <= 0.4) tips.push(`They score mostly on <b>defence / counter</b> — don't over-commit; use feints and second-intention instead of a straight long attack.`);
+  else tips.push(`They're <b>balanced</b> between attack and defence — vary your rhythm so they can't settle.`);
+  if (weak) tips.push(`They concede most to <b>${weak.key}</b> (${weak.count}×) — make that a primary option.`);
+  if (st.avgX >= 9) tips.push(`They tend to finish deep in attacking distance — pressure their preparation before they build speed.`);
+  else if (st.avgX > 0 && st.avgX <= 5) tips.push(`They score close to their own end — they like to draw you in and counter, so avoid diving.`);
+  if (st.topClincher) tips.push(`When it's close they clinch with <b>${st.topClincher.key}</b> — watch for it at high scores.`);
+  return tips;
+}
+
+function renderH2H(name) {
+  const vs = $("scout-vs").value;
+  const card = $("scout-h2h");
+  if (!vs || vs === name || !athleteNames().includes(vs)) { card.classList.add("hidden"); return; }
+  card.classList.remove("hidden");
+  $("h2h-title").textContent = `${name} vs ${vs}`;
+
+  const h2h = data.bouts.filter((b) => {
+    const pair = new Set([b.left, b.right]);
+    return pair.has(name) && pair.has(vs);
+  });
+  if (!h2h.length) {
+    $("h2h-record").textContent = "No bouts between these two fencers yet.";
+    $("h2h-insights").innerHTML = "";
+    $("h2h-bouts").innerHTML = "";
+    return;
+  }
+
+  let winsName = 0, winsVs = 0, tName = 0, tVs = 0;
+  h2h.forEach((b) => {
+    if (b.winner === name) winsName++; else if (b.winner === vs) winsVs++;
+    b.touches.forEach((t) => {
+      const scorer = t.scorer === "left" ? b.left : b.right;
+      if (scorer === name) tName++; else if (scorer === vs) tVs++;
+    });
+  });
+  $("h2h-record").textContent =
+    `${h2h.length} bout${h2h.length !== 1 ? "s" : ""} · wins ${winsName}–${winsVs} · touches ${tName}–${tVs}`;
+
+  const mName = topLabelled(athleteStats(name, h2h).subtypes);
+  const mVs = topLabelled(athleteStats(vs, h2h).subtypes);
+  $("h2h-insights").innerHTML = [
+    [`${name}'s best vs ${vs}`, mName ? `${mName.key} (${mName.count})` : "—"],
+    [`${vs}'s best vs ${name}`, mVs ? `${mVs.key} (${mVs.count})` : "—"],
+  ].map(([k, v]) => `<div class="kv"><span class="k">${k}</span><span class="v">${v}</span></div>`).join("");
+
+  $("h2h-bouts").innerHTML = h2h.slice().reverse().map((b) => {
+    const s = boutScore(b);
+    return `<div class="bout-item" data-id="${b.id}">
+      <span>${ctxBadge(b)} ${b.left} vs ${b.right}</span>
+      <span class="res">${s.l} – ${s.r}</span>
+      <span class="meta">${fmtDate(b.startedAt)}</span>
+    </div>`;
+  }).join("");
+}
 
 // ---------- export / clear ----------
 function download(filename, text, type) {

@@ -256,6 +256,25 @@ input[type=text], select {
 .type-bar .tc { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
 .type-bar.top .tl { color: var(--text); font-weight: 700; }
 
+/* ---------- scouting / game plan ---------- */
+.topbar-btns { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.mt { margin-top: 16px; }
+.keyval { display: flex; flex-direction: column; }
+.kv {
+  display: flex; justify-content: space-between; gap: 12px; align-items: baseline;
+  padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,.06); font-size: .9rem;
+}
+.kv:last-child { border-bottom: none; }
+.kv .k { color: var(--muted); }
+.kv .v { font-weight: 700; text-align: right; }
+.plan-list { display: flex; flex-direction: column; gap: 8px; list-style: none; }
+.plan-list li {
+  background: var(--card2); border-radius: 10px; padding: 10px 14px;
+  font-size: .9rem; line-height: 1.45;
+}
+.plan-list li::before { content: "▸ "; color: var(--accent); font-weight: 800; }
+.plan-list li b { color: var(--text); }
+
 .bout-list { display: flex; flex-direction: column; gap: 8px; }
 .bout-item {
   display: flex; justify-content: space-between; align-items: center;

@@ -13,7 +13,10 @@
 <section id="screen-setup" class="screen active">
   <header class="topbar">
     <h1>🤺 Fencing Coach</h1>
-    <button class="btn ghost" data-nav="stats">📊 Statistics</button>
+    <div class="topbar-btns">
+      <button class="btn ghost" data-nav="scout">🎯 Scouting</button>
+      <button class="btn ghost" data-nav="stats">📊 Statistics</button>
+    </div>
   </header>
   <p class="cloud-status" data-state="sync">☁ Connecting…</p>
 
@@ -196,11 +199,49 @@
   </div>
 </div>
 
+<!-- ============ SCOUTING SCREEN ============ -->
+<section id="screen-scout" class="screen">
+  <header class="topbar">
+    <h1>🎯 Scouting</h1>
+    <div class="topbar-btns">
+      <button class="btn ghost" data-nav="stats">📊 Statistics</button>
+      <button class="btn ghost" data-nav="setup">← Back</button>
+    </div>
+  </header>
+  <p class="cloud-status" data-state="sync">☁ Connecting…</p>
+
+  <div class="card">
+    <label for="scout-fencer">Scout fencer</label>
+    <select id="scout-fencer"></select>
+    <label for="scout-vs" class="mt">Compare vs (optional)</label>
+    <select id="scout-vs"></select>
+  </div>
+
+  <div class="card" id="scout-report">
+    <h2 id="scout-name"></h2>
+    <p id="scout-sample" class="summary"></p>
+    <div id="scout-keys" class="keyval"></div>
+    <h2 class="mt">📋 Game plan</h2>
+    <ul id="scout-plan" class="plan-list"></ul>
+  </div>
+
+  <div class="card hidden" id="scout-h2h">
+    <h2 id="h2h-title">Head-to-head</h2>
+    <p id="h2h-record" class="summary"></p>
+    <div id="h2h-insights" class="keyval"></div>
+    <h2 class="mt">Bouts between them</h2>
+    <div id="h2h-bouts" class="bout-list"></div>
+  </div>
+</section>
+
 <!-- ============ STATS SCREEN ============ -->
 <section id="screen-stats" class="screen">
   <header class="topbar">
     <h1>📊 Statistics</h1>
-    <button class="btn ghost" data-nav="setup">← Back</button>
+    <div class="topbar-btns">
+      <button class="btn ghost" data-nav="scout">🎯 Scouting</button>
+      <button class="btn ghost" data-nav="setup">← Back</button>
+    </div>
   </header>
   <p class="cloud-status" data-state="sync">☁ Connecting…</p>
 
