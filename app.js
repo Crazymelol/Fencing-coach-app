@@ -121,6 +121,7 @@ window.addEventListener("online", syncWithCloud);
 let bout = null;          // current bout in progress
 let pendingTouch = null;  // { x } waiting for scorer/action
 let pendingScorer = null;
+let pendingAction = null; // "attack" | "defence" waiting for its subtype
 
 // ---------- navigation ----------
 function show(screen) {
@@ -149,6 +150,26 @@ function fmtDate(ts) {
     " " + new Date(ts).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
 }
 const ctxBadge = (b) => ((b.context || "training") === "competition" ? "🏆" : "🏋");
+
+// specific action types offered after choosing attack / defence
+const SUBTYPE_LABELS = {
+  attack: {
+    "beat-hit": "Attack + beat",
+    "preparation": "On preparation",
+    "open-distance": "Open-distance",
+    "long": "Long attack",
+  },
+  defence: {
+    "parry-riposte": "Parry-riposte",
+    "counter-attack": "Counter-attack",
+    "beat-hit": "Beat hit",
+  },
+};
+function actionLabel(t) {
+  const icon = t.action === "attack" ? "⚔️" : "🛡️";
+  const sub = t.subtype && SUBTYPE_LABELS[t.action] && SUBTYPE_LABELS[t.action][t.subtype];
+  return `${icon} ${sub || (t.action === "attack" ? "Attack" : "Defence")}`;
+}
 
 // ---------- setup screen ----------
 let target = 5;
@@ -255,10 +276,12 @@ $("piste").addEventListener("pointerdown", (e) => {
 function cancelPending() {
   pendingTouch = null;
   pendingScorer = null;
+  pendingAction = null;
   const m = $("pending-marker");
   if (m) m.remove();
   $("dlg-scorer").classList.add("hidden");
   $("dlg-action").classList.add("hidden");
+  $("dlg-subaction").classList.add("hidden");
 }
 $("cancel-touch").addEventListener("click", cancelPending);
 
@@ -276,10 +299,26 @@ $("back-scorer").addEventListener("click", () => {
   $("dlg-scorer").classList.remove("hidden");
 });
 
-$("choice-attack").addEventListener("click", () => recordTouch("attack"));
-$("choice-defence").addEventListener("click", () => recordTouch("defence"));
-function recordTouch(action) {
-  bout.touches.push({ x: pendingTouch.x, scorer: pendingScorer, action, t: Date.now() });
+$("choice-attack").addEventListener("click", () => pickAction("attack"));
+$("choice-defence").addEventListener("click", () => pickAction("defence"));
+function pickAction(action) {
+  pendingAction = action;
+  $("dlg-action").classList.add("hidden");
+  $("subaction-title").textContent = (action === "attack" ? "Attack" : "Defence") + " — what type?";
+  $("sub-attack").classList.toggle("hidden", action !== "attack");
+  $("sub-defence").classList.toggle("hidden", action !== "defence");
+  $("dlg-subaction").classList.remove("hidden");
+}
+$("back-action").addEventListener("click", () => {
+  $("dlg-subaction").classList.add("hidden");
+  $("dlg-action").classList.remove("hidden");
+});
+document.querySelectorAll("#dlg-subaction [data-sub]").forEach((btn) =>
+  btn.addEventListener("click", () => recordTouch(pendingAction, btn.dataset.sub))
+);
+
+function recordTouch(action, subtype) {
+  bout.touches.push({ x: pendingTouch.x, scorer: pendingScorer, action, subtype, t: Date.now() });
   cancelPending();
   renderBout();
 
@@ -534,7 +573,7 @@ function renderBdTouches() {
     rows.push(`<div class="touch-row" data-i="${i}">
       <span class="tn">${i + 1}</span>
       <span class="tw">${who}</span>
-      <span>${t.action === "attack" ? "⚔️ Attack" : "🛡️ Defence"}</span>
+      <span class="ta">${actionLabel(t)}</span>
       <span class="tm">${(+t.x).toFixed(1)} m</span>
       <span class="res">${l}–${r}</span>
     </div>`);
@@ -597,11 +636,11 @@ $("btn-export").addEventListener("click", () =>
   download("fencing-data.json", JSON.stringify(data, null, 2), "application/json")
 );
 $("btn-export-csv").addEventListener("click", () => {
-  const rows = [["bout_id", "date", "context", "left", "right", "target", "touch_no", "position_m", "scorer", "action"]];
+  const rows = [["bout_id", "date", "context", "left", "right", "target", "touch_no", "position_m", "scorer", "action", "type"]];
   data.bouts.forEach((b) =>
     b.touches.forEach((t, i) =>
       rows.push([b.id, new Date(b.startedAt).toISOString(), b.context || "training", b.left, b.right, b.target,
-        i + 1, t.x, t.scorer === "left" ? b.left : b.right, t.action])
+        i + 1, t.x, t.scorer === "left" ? b.left : b.right, t.action, t.subtype || ""])
     )
   );
   download("fencing-data.csv", rows.map((r) => r.join(",")).join("\n"), "text/csv");

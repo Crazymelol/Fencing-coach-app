@@ -124,6 +124,25 @@
   </div>
 </div>
 
+<!-- ============ SUB-ACTION DIALOG (type of attack / defence) ============ -->
+<div id="dlg-subaction" class="overlay hidden">
+  <div class="dialog">
+    <h3 id="subaction-title">What type?</h3>
+    <div id="sub-attack" class="sub-choice hidden">
+      <button class="btn sub-btn attack" data-sub="beat-hit">⚔️ Attack with beat hit</button>
+      <button class="btn sub-btn attack" data-sub="preparation">⚔️ Attack on preparation</button>
+      <button class="btn sub-btn attack" data-sub="open-distance">⚔️ Open distance attack</button>
+      <button class="btn sub-btn attack" data-sub="long">⚔️ Long attack</button>
+    </div>
+    <div id="sub-defence" class="sub-choice hidden">
+      <button class="btn sub-btn defence" data-sub="parry-riposte">🛡️ Parry riposte</button>
+      <button class="btn sub-btn defence" data-sub="counter-attack">🛡️ Counter attack</button>
+      <button class="btn sub-btn defence" data-sub="beat-hit">🛡️ Beat hit</button>
+    </div>
+    <button id="back-action" class="btn ghost">← Back</button>
+  </div>
+</div>
+
 <!-- ============ BOUT END DIALOG ============ -->
 <div id="dlg-boutend" class="overlay hidden">
   <div class="dialog">

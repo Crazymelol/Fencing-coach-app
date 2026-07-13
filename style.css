@@ -182,6 +182,12 @@ input[type=text], select {
 .btn.choice.green { background: var(--green); }
 .btn.choice.attack { background: var(--attack); color: #2a1500; }
 .btn.choice.defence { background: var(--defence); color: #00253a; }
+
+/* sub-action (type of attack / defence) */
+.sub-choice { display: flex; flex-direction: column; gap: 10px; }
+.sub-btn { width: 100%; text-align: left; padding: 16px 18px; font-size: 1.05rem; border: 1px solid transparent; }
+.sub-btn.attack { background: rgba(255,140,66,.16); border-color: var(--attack); }
+.sub-btn.defence { background: rgba(79,195,247,.16); border-color: var(--defence); }
 .summary { color: var(--muted); white-space: pre-line; }
 .dialog.detail { max-width: 560px; max-height: 92vh; overflow-y: auto; }
 
@@ -196,12 +202,13 @@ input[type=text], select {
 .bd-filters .seg-btn { padding: 8px 12px; font-size: .85rem; }
 .touch-list { display: flex; flex-direction: column; gap: 4px; max-height: 32vh; overflow-y: auto; }
 .touch-row {
-  display: grid; grid-template-columns: 2em 1fr 6.5em 3.5em 3em;
+  display: grid; grid-template-columns: 1.8em 1fr 9.5em 3em 2.9em;
   gap: 6px; align-items: center; text-align: left;
   background: var(--card2); border-radius: 8px; padding: 6px 10px; font-size: .85rem;
 }
 .touch-row .tn { color: var(--muted); }
 .touch-row .tw { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.touch-row .ta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .touch-row .tm { color: var(--muted); text-align: right; }
 .touch-row .res { font-weight: 700; text-align: right; }
 
