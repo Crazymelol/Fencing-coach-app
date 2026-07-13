@@ -233,6 +233,25 @@ input[type=text], select {
 .zone-bar .zl { font-size: .65rem; color: var(--muted); text-align: center; }
 .zone-bar .zv { font-size: .75rem; font-weight: 700; }
 
+/* ---------- action-type breakdown ---------- */
+.clincher {
+  background: rgba(79,140,255,.14); border: 1px solid var(--accent);
+  border-radius: 10px; padding: 10px 14px; font-weight: 700; font-size: .95rem;
+}
+.type-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 14px; }
+.type-head { font-size: .9rem; margin-bottom: 8px; }
+.type-head.attack { color: var(--attack); }
+.type-head.defence { color: var(--defence); }
+.type-bars { display: flex; flex-direction: column; gap: 8px; }
+.type-bar { display: grid; grid-template-columns: 7.5em 1fr 1.6em; gap: 8px; align-items: center; font-size: .82rem; }
+.type-bar .tl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+.type-bar .tbar { height: 12px; background: var(--card2); border-radius: 6px; overflow: hidden; }
+.type-bar .tfill { display: block; height: 100%; border-radius: 6px; min-width: 2px; }
+.type-bar.attack .tfill { background: var(--attack); }
+.type-bar.defence .tfill { background: var(--defence); }
+.type-bar .tc { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+.type-bar.top .tl { color: var(--text); font-weight: 700; }
+
 .bout-list { display: flex; flex-direction: column; gap: 8px; }
 .bout-item {
   display: flex; justify-content: space-between; align-items: center;
@@ -249,4 +268,5 @@ input[type=text], select {
   .vs { display: none; }
   .sb-score { font-size: 1.7rem; }
   .sb-name { font-size: .9rem; }
+  .type-cols { grid-template-columns: 1fr; gap: 14px; }
 }

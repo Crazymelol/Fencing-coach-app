@@ -396,6 +396,8 @@ function athleteStats(name) {
     markers: [],          // touches scored: {x, action}
     receivedMarkers: [],  // touches conceded: {x}
     zones: new Array(ZONE_LABELS.length).fill(0),
+    subtypes: { attack: {}, defence: {} }, // scored touches by specific type
+    clinchers: {},        // winning-touch type -> count (bouts this athlete won)
     avgX: 0,
   };
   let sumX = 0;
@@ -410,6 +412,8 @@ function athleteStats(name) {
       if (t.scorer === side) {
         st.scored++;
         st[t.action]++;
+        const key = t.subtype || "other";
+        st.subtypes[t.action][key] = (st.subtypes[t.action][key] || 0) + 1;
         st.markers.push({ x, action: t.action });
         st.zones[Math.min(ZONE_LABELS.length - 1, Math.floor(x / 2))]++;
         sumX += x;
@@ -418,9 +422,29 @@ function athleteStats(name) {
         st.receivedMarkers.push({ x });
       }
     });
+    // the last touch reached target and ended the bout — if this athlete scored it, it's a clincher
+    const last = b.touches[b.touches.length - 1];
+    if (b.winner === name && last && last.scorer === side) {
+      const label = subtypeLabelFor(last.action, last.subtype || "other");
+      st.clinchers[label] = (st.clinchers[label] || 0) + 1; // keyed by display label (action-disambiguated)
+    }
   });
   st.avgX = st.scored ? sumX / st.scored : 0;
+  st.topClincher = topEntry(st.clinchers);
   return st;
+}
+
+// { key: count } -> { key, label, count } of the largest entry, or null
+function topEntry(counts) {
+  const entries = Object.entries(counts);
+  if (!entries.length) return null;
+  const [key, count] = entries.sort((a, b) => b[1] - a[1])[0];
+  return { key, count };
+}
+// label for a subtype key within a known action group ("beat-hit" exists in both, so pass the action)
+function subtypeLabelFor(action, key) {
+  return (SUBTYPE_LABELS[action] && SUBTYPE_LABELS[action][key]) ||
+    (key === "other" ? "Unspecified" : key);
 }
 
 function renderStats() {
@@ -447,6 +471,9 @@ function renderAthleteStats() {
     markers.innerHTML = "";
     zoneChart.innerHTML = "";
     boutsList.innerHTML = "";
+    $("type-clincher").textContent = "";
+    $("type-attack").innerHTML = "";
+    $("type-defence").innerHTML = "";
     return;
   }
 
@@ -487,6 +514,32 @@ function renderAthleteStats() {
       <div class="zl">${ZONE_LABELS[i]}</div>
     </div>`
   ).join("");
+
+  // action-type breakdown + best closer
+  $("type-clincher").textContent = st.topClincher
+    ? `🏆 Best closer: ${st.topClincher.key} (${st.topClincher.count} winning touch${st.topClincher.count > 1 ? "es" : ""})`
+    : "🏆 Best closer: — (no wins yet)";
+  const renderTypeBars = (elId, action) => {
+    const counts = st.subtypes[action];
+    // fixed order from SUBTYPE_LABELS, plus any legacy "other"
+    const keys = [...Object.keys(SUBTYPE_LABELS[action])];
+    if (counts.other) keys.push("other");
+    const groupMax = Math.max(1, ...keys.map((k) => counts[k] || 0));
+    const anyScored = keys.some((k) => counts[k]);
+    $(elId).innerHTML = anyScored
+      ? keys.map((k) => {
+          const c = counts[k] || 0;
+          const top = c > 0 && c === groupMax;
+          return `<div class="type-bar ${action}${top ? " top" : ""}">
+            <span class="tl">${subtypeLabelFor(action, k)}</span>
+            <span class="tbar"><span class="tfill" style="width:${(c / groupMax) * 100}%"></span></span>
+            <span class="tc">${c}</span>
+          </div>`;
+        }).join("")
+      : `<p class="empty">None yet.</p>`;
+  };
+  renderTypeBars("type-attack", "attack");
+  renderTypeBars("type-defence", "defence");
 
   // bout history for this athlete (tap a bout for its own breakdown)
   const hist = filteredBouts().filter((b) => b.left === name || b.right === name).slice().reverse();
